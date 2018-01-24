@@ -407,7 +407,34 @@ static int __init vdso_init(void)
 {
 	vdso_lookup[ARM64_VDSO].dm = &vdso_spec[A_VVAR];
 	vdso_lookup[ARM64_VDSO].cm = &vdso_spec[A_VDSO];
+	u32 use_syscall = !tk->tkr_mono.clock->archdata.vdso_direct;
 
+	++vdso_data->tb_seq_count;
+	smp_wmb();
+
+	vdso_data->use_syscall			= use_syscall;
+	vdso_data->xtime_coarse_sec		= tk->xtime_sec;
+	vdso_data->xtime_coarse_nsec		= tk->tkr_mono.xtime_nsec >>
+							tk->tkr_mono.shift;
+	vdso_data->wtm_clock_sec		= tk->wall_to_monotonic.tv_sec;
+	vdso_data->wtm_clock_nsec		= tk->wall_to_monotonic.tv_nsec;
+
+	if (!use_syscall) {
+		struct timespec btm = ktime_to_timespec(tk->offs_boot);
+
+		/* tkr_mono.cycle_last == tkr_raw.cycle_last */
+		vdso_data->cs_cycle_last	= tk->tkr_mono.cycle_last;
+		vdso_data->raw_time_sec         = tk->raw_sec;
+		vdso_data->raw_time_nsec        = tk->tkr_raw.xtime_nsec;
+		vdso_data->xtime_clock_sec	= tk->xtime_sec;
+		vdso_data->xtime_clock_snsec	= tk->tkr_mono.xtime_nsec;
+		vdso_data->cs_mono_mult		= tk->tkr_mono.mult;
+		vdso_data->cs_raw_mult		= tk->tkr_raw.mult;
+		/* tkr_mono.shift == tkr_raw.shift */
+		vdso_data->cs_shift		= tk->tkr_mono.shift;
+		vdso_data->btm_sec		= btm.tv_sec;
+		vdso_data->btm_nsec		= btm.tv_nsec;
+	}
 	return __vdso_init(ARM64_VDSO);
 }
 arch_initcall(vdso_init);
