@@ -1960,6 +1960,52 @@ static struct cftype files[] = {
 	{ }	/* terminate */
 };
 
+<<<<<<< HEAD
+=======
+#ifdef CONFIG_UCLAMP_ASSIST
+struct ucl_param {
+	char *name;
+	char uclamp_min[3];
+	char uclamp_max[3];
+	u64  uclamp_latency_sensitive;
+	u64  uclamp_boosted;
+};
+
+static void uclamp_set(struct kernfs_open_file *of,
+		size_t nbytes, loff_t off)
+{
+	int i;
+	struct cpuset *cs = css_cs(of_css(of));
+	const char *cs_name = cs->css.cgroup->kn->name;
+
+	static struct ucl_param tgts[] = {
+		{"top-app",    	     	"10", "100", 1, 1},
+		{"foreground", 	     	"0",  "50",  0, 0},
+		{"background", 	     	"20", "100", 0, 0},
+		{"system-background", 	"0",  "40",  0, 0},
+		{"camera-daemon",	"50", "100", 1, 1},
+	};
+
+	for (i = 0; i < ARRAY_SIZE(tgts); i++) {
+		struct ucl_param tgt = tgts[i];
+
+		if (!strncmp(cs_name, tgt.name, strlen(tgt.name))) {
+			cpu_uclamp_min_write_wrapper(of, tgt.uclamp_min,
+				nbytes, off);
+			cpu_uclamp_max_write_wrapper(of, tgt.uclamp_max,
+				nbytes, off);
+			cpu_uclamp_ls_write_u64_wrapper(&cs->css, NULL,
+				tgt.uclamp_latency_sensitive);
+			cpu_uclamp_boost_write_u64_wrapper(&cs->css, NULL,
+				tgt.uclamp_boosted);
+
+			break;
+		}
+	}
+}
+#endif
+
+>>>>>>> 89c7e143bd913 (cpuset: uclamp_assist: Add camera-daemon to uclamp tunables)
 /*
  *	cpuset_css_alloc - allocate a cpuset css
  *	cgrp:	control group that the new cpuset will be part of
