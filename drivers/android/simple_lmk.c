@@ -54,6 +54,14 @@ static void victim_swap(void *lhs_ptr, void *rhs_ptr, int size)
 	swap(*lhs, *rhs);
 }
 
+static bool vtsk_is_duplicate(int vlen, struct task_struct *vtsk)
+{
+	struct victim_info *lhs = (typeof(lhs))lhs_ptr;
+	struct victim_info *rhs = (typeof(rhs))rhs_ptr;
+
+	swap(*lhs, *rhs);
+}
+
 static unsigned long get_total_mm_pages(struct mm_struct *mm)
 {
 	unsigned long pages = 0;
@@ -144,7 +152,7 @@ static unsigned long find_victims(int *vindex)
 		 * killing the larger ones first.
 		 */
 		sort(&victims[old_vindex], *vindex - old_vindex,
-		     sizeof(*victims), victim_cmp, NULL);
+		     sizeof(*victims), victim_cmp, victim_swap);
 
 		/* Stop when we are out of space or have enough pages found */
 		if (*vindex == MAX_VICTIMS || pages_found >= MIN_FREE_PAGES) {
@@ -207,7 +215,8 @@ static void scan_and_kill(void)
 		 * victims that have a lower adj can be killed in place of
 		 * smaller victims with a high adj.
 		 */
-		sort(victims, nr_to_kill, sizeof(*victims), victim_cmp, NULL);
+		sort(victims, nr_to_kill, sizeof(*victims), victim_cmp,
+		     victim_swap);
 
 		/* Second round of processing to finally select the victims */
 		nr_to_kill = process_victims(nr_to_kill);
