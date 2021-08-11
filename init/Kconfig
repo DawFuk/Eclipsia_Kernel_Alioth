@@ -1222,6 +1222,31 @@ config SCHED_TUNE
 
 	  If unsure, say N.
 
+config STUNE_ASSIST
+	bool "SchedTune configuration helper"
+	depends on SCHED_TUNE
+	depends on ANDROID
+	help
+	  This option enables in-kernel overrides for SchedTune values.
+
+	  If unsure, say N.
+config CPUINFO_CACHED_FREQ_TASKS
+	string "Default task names for cached-frequency info enforcement"
+	help
+	  This feature allow us to specify the default values of which libraries
+	  or tasks that are being enforced to showed a cached-frequency instead
+	  of the actual policy.
+
+config DEFAULT_USE_ENERGY_AWARE
+	bool "Default to enabling the Energy Aware Scheduler feature"
+	default n
+	help
+	  This option defaults the ENERGY_AWARE scheduling feature to true,
+	  as without SCHED_DEBUG set this feature can't be enabled or disabled
+	  via sysctl.
+
+	  Say N if unsure.
+
 config SYSFS_DEPRECATED
 	bool "Enable deprecated sysfs features to support old userspace tools"
 	depends on SYSFS
