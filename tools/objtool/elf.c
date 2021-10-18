@@ -355,7 +355,103 @@ err:
 	return -1;
 }
 
-static int read_relas(struct elf *elf)
+static struct section *elf_create_reloc_section(struct elf *elf,
+						struct section *base,
+						int reltype);
+
+int elf_add_reloc(struct elf *elf, struct section *sec, unsigned long offset,
+		  unsigned int type, struct symbol *sym, int addend)
+{
+	struct reloc *reloc;
+
+	if (!sec->reloc && !elf_create_reloc_section(elf, sec, SHT_RELA))
+		return -1;
+
+	reloc = malloc(sizeof(*reloc));
+	if (!reloc) {
+		perror("malloc");
+		return -1;
+	}
+	memset(reloc, 0, sizeof(*reloc));
+
+	reloc->sec = sec->reloc;
+	reloc->offset = offset;
+	reloc->type = type;
+	reloc->sym = sym;
+	reloc->addend = addend;
+
+	list_add_tail(&reloc->list, &sec->reloc->reloc_list);
+	elf_hash_add(reloc, &reloc->hash, reloc_hash(reloc));
+
+	sec->reloc->sh.sh_size += sec->reloc->sh.sh_entsize;
+	sec->reloc->changed = true;
+
+	return 0;
+}
+
+int elf_add_reloc_to_insn(struct elf *elf, struct section *sec,
+			  unsigned long offset, unsigned int type,
+			  struct section *insn_sec, unsigned long insn_off)
+{
+	struct symbol *sym;
+	int addend;
+
+	if (insn_sec->sym) {
+		sym = insn_sec->sym;
+		addend = insn_off;
+
+	} else {
+		/*
+		 * The Clang assembler strips section symbols, so we have to
+		 * reference the function symbol instead:
+		 */
+		sym = find_symbol_containing(insn_sec, insn_off);
+		if (!sym) {
+			/*
+			 * Hack alert.  This happens when we need to reference
+			 * the NOP pad insn immediately after the function.
+			 */
+			sym = find_symbol_containing(insn_sec, insn_off - 1);
+		}
+
+		if (!sym) {
+			WARN("can't find symbol containing %s+0x%lx", insn_sec->name, insn_off);
+			return -1;
+		}
+
+		addend = insn_off - sym->offset;
+	}
+
+	return elf_add_reloc(elf, sec, offset, type, sym, addend);
+}
+
+static int read_rel_reloc(struct section *sec, int i, struct reloc *reloc, unsigned int *symndx)
+{
+	if (!gelf_getrel(sec->data, i, &reloc->rel)) {
+		WARN_ELF("gelf_getrel");
+		return -1;
+	}
+	reloc->type = GELF_R_TYPE(reloc->rel.r_info);
+	reloc->addend = 0;
+	reloc->offset = reloc->rel.r_offset;
+	*symndx = GELF_R_SYM(reloc->rel.r_info);
+	return 0;
+}
+
+static int read_rela_reloc(struct section *sec, int i, struct reloc *reloc, unsigned int *symndx)
+{
+	if (!gelf_getrela(sec->data, i, &reloc->rela)) {
+		WARN_ELF("gelf_getrela");
+		return -1;
+	}
+	reloc->type = GELF_R_TYPE(reloc->rela.r_info);
+	reloc->addend = reloc->rela.r_addend;
+	reloc->offset = reloc->rela.r_offset;
+	*symndx = GELF_R_SYM(reloc->rela.r_info);
+	return 0;
+}
+
+static int read_relocs(struct elf *elf)
 {
 	struct section *sec;
 	struct rela *rela;
@@ -597,35 +693,132 @@ struct section *elf_create_rela_section(struct elf *elf, struct section *base)
 	return sec;
 }
 
-int elf_rebuild_rela_section(struct section *sec)
+static struct section *elf_create_reloc_section(struct elf *elf,
+					 struct section *base,
+					 int reltype)
 {
-	struct rela *rela;
-	int nr, idx = 0, size;
-	GElf_Rela *relas;
+	switch (reltype) {
+	case SHT_REL:  return elf_create_rel_reloc_section(elf, base);
+	case SHT_RELA: return elf_create_rela_reloc_section(elf, base);
+	default:       return NULL;
+	}
+}
 
-	nr = 0;
-	list_for_each_entry(rela, &sec->rela_list, list)
-		nr++;
+static int elf_rebuild_rel_reloc_section(struct section *sec)
+{
+	struct reloc *reloc;
+	int idx = 0;
+	void *buf;
 
-	size = nr * sizeof(*relas);
-	relas = malloc(size);
-	if (!relas) {
+	/* Allocate a buffer for relocations */
+	buf = malloc(sec->sh.sh_size);
+	if (!buf) {
 		perror("malloc");
 		return -1;
 	}
 
-	sec->data->d_buf = relas;
-	sec->data->d_size = size;
-
-	sec->sh.sh_size = size;
+	sec->data->d_buf = buf;
+	sec->data->d_size = sec->sh.sh_size;
+	sec->data->d_type = ELF_T_REL;
 
 	idx = 0;
-	list_for_each_entry(rela, &sec->rela_list, list) {
-		relas[idx].r_offset = rela->offset;
-		relas[idx].r_addend = rela->addend;
-		relas[idx].r_info = GELF_R_INFO(rela->sym->idx, rela->type);
+	list_for_each_entry(reloc, &sec->reloc_list, list) {
+		reloc->rel.r_offset = reloc->offset;
+		reloc->rel.r_info = GELF_R_INFO(reloc->sym->idx, reloc->type);
+		if (!gelf_update_rel(sec->data, idx, &reloc->rel)) {
+			WARN_ELF("gelf_update_rel");
+			return -1;
+		}
 		idx++;
 	}
+
+	return 0;
+}
+
+static int elf_rebuild_rela_reloc_section(struct section *sec)
+{
+	struct reloc *reloc;
+	int idx = 0;
+	void *buf;
+
+	/* Allocate a buffer for relocations with addends */
+	buf = malloc(sec->sh.sh_size);
+	if (!buf) {
+		perror("malloc");
+		return -1;
+	}
+
+	sec->data->d_buf = buf;
+	sec->data->d_size = sec->sh.sh_size;
+	sec->data->d_type = ELF_T_RELA;
+
+	idx = 0;
+	list_for_each_entry(reloc, &sec->reloc_list, list) {
+		reloc->rela.r_offset = reloc->offset;
+		reloc->rela.r_addend = reloc->addend;
+		reloc->rela.r_info = GELF_R_INFO(reloc->sym->idx, reloc->type);
+		if (!gelf_update_rela(sec->data, idx, &reloc->rela)) {
+			WARN_ELF("gelf_update_rela");
+			return -1;
+		}
+		idx++;
+	}
+
+	return 0;
+}
+
+static int elf_rebuild_reloc_section(struct elf *elf, struct section *sec)
+{
+	switch (sec->sh.sh_type) {
+	case SHT_REL:  return elf_rebuild_rel_reloc_section(sec);
+	case SHT_RELA: return elf_rebuild_rela_reloc_section(sec);
+	default:       return -1;
+	}
+}
+
+int elf_write_insn(struct elf *elf, struct section *sec,
+		   unsigned long offset, unsigned int len,
+		   const char *insn)
+{
+	Elf_Data *data = sec->data;
+
+	if (data->d_type != ELF_T_BYTE || data->d_off) {
+		WARN("write to unexpected data for section: %s", sec->name);
+		return -1;
+	}
+
+	memcpy(data->d_buf + offset, insn, len);
+	elf_flagdata(data, ELF_C_SET, ELF_F_DIRTY);
+
+	elf->changed = true;
+
+	return 0;
+}
+
+int elf_write_reloc(struct elf *elf, struct reloc *reloc)
+{
+	struct section *sec = reloc->sec;
+
+	if (sec->sh.sh_type == SHT_REL) {
+		reloc->rel.r_info = GELF_R_INFO(reloc->sym->idx, reloc->type);
+		reloc->rel.r_offset = reloc->offset;
+
+		if (!gelf_update_rel(sec->data, reloc->idx, &reloc->rel)) {
+			WARN_ELF("gelf_update_rel");
+			return -1;
+		}
+	} else {
+		reloc->rela.r_info = GELF_R_INFO(reloc->sym->idx, reloc->type);
+		reloc->rela.r_addend = reloc->addend;
+		reloc->rela.r_offset = reloc->offset;
+
+		if (!gelf_update_rela(sec->data, reloc->idx, &reloc->rela)) {
+			WARN_ELF("gelf_update_rela");
+			return -1;
+		}
+	}
+
+	elf->changed = true;
 
 	return 0;
 }
@@ -647,6 +840,15 @@ int elf_write(struct elf *elf)
 				WARN_ELF("gelf_update_shdr");
 				return -1;
 			}
+
+			if (sec->base &&
+			    elf_rebuild_reloc_section(elf, sec)) {
+				WARN("elf_rebuild_reloc_section");
+				return -1;
+			}
+
+			sec->changed = false;
+			elf->changed = true;
 		}
 	}
 

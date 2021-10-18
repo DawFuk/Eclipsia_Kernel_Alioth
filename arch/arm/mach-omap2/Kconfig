@@ -104,6 +104,10 @@ config ARCH_OMAP2PLUS
 	select OMAP_DM_TIMER
 	select OMAP_GPMC
 	select PINCTRL
+	select PM
+	select PM_GENERIC_DOMAINS
+	select PM_GENERIC_DOMAINS_OF
+	select RESET_CONTROLLER
 	select SOC_BUS
 	select TI_SYSC
 	select OMAP_IRQCHIP

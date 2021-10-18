@@ -3582,7 +3582,83 @@ static struct clk_branch gcc_video_xo_clk = {
 	},
 };
 
-static struct clk_regmap *gcc_bengal_clocks[] = {
+static struct gdsc gcc_camss_top_gdsc = {
+	.gdscr = 0x58004,
+	.pd = {
+		.name = "gcc_camss_top",
+	},
+	.pwrsts = PWRSTS_OFF_ON,
+};
+
+static struct gdsc gcc_ufs_phy_gdsc = {
+	.gdscr = 0x45004,
+	.pd = {
+		.name = "gcc_ufs_phy",
+	},
+	.pwrsts = PWRSTS_OFF_ON,
+};
+
+static struct gdsc gcc_usb30_prim_gdsc = {
+	.gdscr = 0x1a004,
+	.pd = {
+		.name = "gcc_usb30_prim",
+	},
+	.pwrsts = PWRSTS_OFF_ON,
+};
+
+static struct gdsc gcc_vcodec0_gdsc = {
+	.gdscr = 0x58098,
+	.pd = {
+		.name = "gcc_vcodec0",
+	},
+	.pwrsts = PWRSTS_OFF_ON,
+};
+
+static struct gdsc gcc_venus_gdsc = {
+	.gdscr = 0x5807c,
+	.pd = {
+		.name = "gcc_venus",
+	},
+	.pwrsts = PWRSTS_OFF_ON,
+};
+
+static struct gdsc hlos1_vote_turing_mmu_tbu1_gdsc = {
+	.gdscr = 0x7d060,
+	.pd = {
+		.name = "hlos1_vote_turing_mmu_tbu1",
+	},
+	.pwrsts = PWRSTS_OFF_ON,
+	.flags = VOTABLE,
+};
+
+static struct gdsc hlos1_vote_turing_mmu_tbu0_gdsc = {
+	.gdscr = 0x7d07c,
+	.pd = {
+		.name = "hlos1_vote_turing_mmu_tbu0",
+	},
+	.pwrsts = PWRSTS_OFF_ON,
+	.flags = VOTABLE,
+};
+
+static struct gdsc hlos1_vote_mm_snoc_mmu_tbu_rt_gdsc = {
+	.gdscr = 0x7d074,
+	.pd = {
+		.name = "hlos1_vote_mm_snoc_mmu_tbu_rt",
+	},
+	.pwrsts = PWRSTS_OFF_ON,
+	.flags = VOTABLE,
+};
+
+static struct gdsc hlos1_vote_mm_snoc_mmu_tbu_nrt_gdsc = {
+	.gdscr = 0x7d078,
+	.pd = {
+		.name = "hlos1_vote_mm_snoc_mmu_tbu_nrt",
+	},
+	.pwrsts = PWRSTS_OFF_ON,
+	.flags = VOTABLE,
+};
+
+static struct clk_regmap *gcc_sm6115_clocks[] = {
 	[GCC_AHB2PHY_CSI_CLK] = &gcc_ahb2phy_csi_clk.clkr,
 	[GCC_AHB2PHY_USB_CLK] = &gcc_ahb2phy_usb_clk.clkr,
 	[GCC_BIMC_GPU_AXI_CLK] = &gcc_bimc_gpu_axi_clk.clkr,

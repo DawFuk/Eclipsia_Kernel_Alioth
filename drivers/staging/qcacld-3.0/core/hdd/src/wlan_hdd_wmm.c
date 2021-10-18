@@ -1680,51 +1680,6 @@ QDF_STATUS hdd_wmm_adapter_close(struct hdd_adapter *adapter)
 }
 
 /**
- * hdd_check_and_upgrade_udp_qos() - Check and upgrade the qos for UDP packets
- *				     if the current set priority is below the
- *				     pre-configured threshold for upgrade.
- * @adapter: [in] pointer to the adapter context (Should not be invalid)
- * @skb: [in] pointer to the packet to be transmitted
- * @user_pri: [out] priority set for this packet
- *
- * This function checks if the packet is a UDP packet and upgrades its
- * priority if its below the pre-configured upgrade threshold.
- * The upgrade order is as below:
- * BK -> BE -> VI -> VO
- *
- * Return: none
- */
-static inline void
-hdd_check_and_upgrade_udp_qos(struct hdd_adapter *adapter,
-			      qdf_nbuf_t skb,
-			      enum sme_qos_wmmuptype *user_pri)
-{
-	/* Upgrade UDP pkt priority alone */
-	if (!(qdf_nbuf_is_ipv4_udp_pkt(skb) || qdf_nbuf_is_ipv6_udp_pkt(skb)))
-		return;
-
-	switch (adapter->upgrade_udp_qos_threshold) {
-	case QCA_WLAN_AC_BK:
-		break;
-	case QCA_WLAN_AC_BE:
-		if (*user_pri == qca_wlan_ac_to_sme_qos(QCA_WLAN_AC_BK))
-			*user_pri = qca_wlan_ac_to_sme_qos(QCA_WLAN_AC_BE);
-
-		break;
-	case QCA_WLAN_AC_VI:
-	case QCA_WLAN_AC_VO:
-		if (*user_pri <
-		    qca_wlan_ac_to_sme_qos(adapter->upgrade_udp_qos_threshold))
-			*user_pri = qca_wlan_ac_to_sme_qos(
-					adapter->upgrade_udp_qos_threshold);
-
-		break;
-	default:
-		break;
-	}
-}
-
-/**
  * hdd_wmm_classify_pkt() - Function which will classify an OS packet
  * into a WMM AC based on DSCP
  *
@@ -1849,7 +1804,12 @@ void hdd_wmm_classify_pkt(struct hdd_adapter *adapter,
 	 * Upgrade the priority, if the user priority of this packet is
 	 * less than the configured threshold.
 	 */
-	hdd_check_and_upgrade_udp_qos(adapter, skb, user_pri);
+	if (*user_pri < adapter->upgrade_udp_qos_threshold &&
+	    (qdf_nbuf_is_ipv4_udp_pkt(skb) || qdf_nbuf_is_ipv6_udp_pkt(skb))) {
+		/* Upgrade UDP pkt priority alone */
+		*user_pri = qca_wlan_ac_to_sme_qos(
+				adapter->upgrade_udp_qos_threshold);
+	}
 
 #ifdef HDD_WMM_DEBUG
 	hdd_debug("tos is %d, dscp is %d, up is %d", tos, dscp, *user_pri);
@@ -1945,38 +1905,36 @@ static uint16_t hdd_wmm_select_queue(struct net_device *dev,
 
 	return index;
 }
-
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
-uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb,
-			  struct net_device *sb_dev)
+uint16_t  hdd_select_queue(struct net_device *dev, struct sk_buff *skb,
+			  struct net_device *sb_dev,select_queue_fallback_t fallback)
 {
 	return hdd_wmm_select_queue(dev, skb);
 }
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+/*elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
 uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb,
 			  struct net_device *sb_dev,
 			  select_queue_fallback_t fallback)
 {
 	return hdd_wmm_select_queue(dev, skb);
-}
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
+}*/
+/*elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
 uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb,
 			  void *accel_priv, select_queue_fallback_t fallback)
 {
 	return hdd_wmm_select_queue(dev, skb);
-}
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0))
+}*/
+/*elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0))
 uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb,
 			  void *accel_priv)
 {
 	return hdd_wmm_select_queue(dev, skb);
-}
-#else
+}*/
+/*
 uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb)
 {
 	return hdd_wmm_select_queue(dev, skb);
 }
-#endif
+#endif*/
 
 
 /**

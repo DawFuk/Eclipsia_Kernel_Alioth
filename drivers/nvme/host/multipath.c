@@ -227,7 +227,61 @@ static bool nvme_ns_head_poll(struct request_queue *q, blk_qc_t qc)
 	if (likely(ns && nvme_path_is_optimized(ns)))
 		found = ns->queue->poll_fn(q, qc);
 	srcu_read_unlock(&head->srcu, srcu_idx);
-	return found;
+	return ret;
+}
+#else
+#define nvme_ns_head_report_zones	NULL
+#endif /* CONFIG_BLK_DEV_ZONED */
+
+const struct block_device_operations nvme_ns_head_ops = {
+	.owner		= THIS_MODULE,
+	.submit_bio	= nvme_ns_head_submit_bio,
+	.open		= nvme_ns_head_open,
+	.release	= nvme_ns_head_release,
+	.ioctl		= nvme_ns_head_ioctl,
+	.getgeo		= nvme_getgeo,
+	.report_zones	= nvme_ns_head_report_zones,
+	.pr_ops		= &nvme_pr_ops,
+};
+
+static inline struct nvme_ns_head *cdev_to_ns_head(struct cdev *cdev)
+{
+	return container_of(cdev, struct nvme_ns_head, cdev);
+}
+
+static int nvme_ns_head_chr_open(struct inode *inode, struct file *file)
+{
+	if (!nvme_tryget_ns_head(cdev_to_ns_head(inode->i_cdev)))
+		return -ENXIO;
+	return 0;
+}
+
+static int nvme_ns_head_chr_release(struct inode *inode, struct file *file)
+{
+	nvme_put_ns_head(cdev_to_ns_head(inode->i_cdev));
+	return 0;
+}
+
+static const struct file_operations nvme_ns_head_chr_fops = {
+	.owner		= THIS_MODULE,
+	.open		= nvme_ns_head_chr_open,
+	.release	= nvme_ns_head_chr_release,
+	.unlocked_ioctl	= nvme_ns_head_chr_ioctl,
+	.compat_ioctl	= compat_ptr_ioctl,
+};
+
+static int nvme_add_ns_head_cdev(struct nvme_ns_head *head)
+{
+	int ret;
+
+	head->cdev_device.parent = &head->subsys->dev;
+	ret = dev_set_name(&head->cdev_device, "ng%dn%d",
+			   head->subsys->instance, head->instance);
+	if (ret)
+		return ret;
+	ret = nvme_cdev_add(&head->cdev, &head->cdev_device,
+			    &nvme_ns_head_chr_fops, THIS_MODULE);
+	return ret;
 }
 
 static void nvme_requeue_work(struct work_struct *work)

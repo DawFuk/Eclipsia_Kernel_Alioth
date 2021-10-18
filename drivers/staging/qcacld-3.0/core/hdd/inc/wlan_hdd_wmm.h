@@ -260,22 +260,17 @@ QDF_STATUS hdd_wmm_adapter_close(struct hdd_adapter *adapter);
  *
  * Return: Qdisc queue index.
  */
-#if (LINUX_VERSION_CODE >= KERNEL_VERSION(5, 4, 0))
 uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb,
-			  struct net_device *sb_dev);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 19, 0))
+			  struct net_device *sb_dev,select_queue_fallback_t fallback);
+/*elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
 uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb,
-			  struct net_device *sb_dev,
-			  select_queue_fallback_t fallback);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 14, 0))
+			  void *accel_priv, select_queue_fallback_t fallback);*/
+/*elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0))
 uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb,
-			  void *accel_priv, select_queue_fallback_t fallback);
-#elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 13, 0))
-uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb,
-			  void *accel_priv);
-#else
-uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb);
-#endif
+			  void *accel_priv);*/
+
+/*uint16_t hdd_select_queue(struct net_device *dev, struct sk_buff *skb);*/
+
 
 /**
  * hdd_wmm_acquire_access_required() - Function which will determine
