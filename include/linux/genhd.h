@@ -208,7 +208,15 @@ struct gendisk {
 	void *private_data;
 
 	int flags;
-	struct rw_semaphore lookup_sem;
+	unsigned long state;
+#define GD_NEED_PART_SCAN		0
+#define GD_READ_ONLY			1
+#define GD_DEAD				2
+
+	struct mutex open_mutex;	/* open/close mutex */
+	unsigned open_partitions;	/* number of open partitions */
+
+	struct backing_dev_info	*bdi;
 	struct kobject *slave_dir;
 
 	struct timer_rand_state *random;

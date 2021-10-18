@@ -1,9 +1,9 @@
 # SPDX-License-Identifier: GPL-2.0
-VERSION = 4
-PATCHLEVEL = 19
-SUBLEVEL = 216
-EXTRAVERSION =
-NAME = "People's Front"
+VERSION = 5
+PATCHLEVEL = 15
+SUBLEVEL = 0
+EXTRAVERSION = -rc6
+NAME = Opossums on Parade
 
 # *DOCUMENTATION*
 # To see a list of typical targets execute "make help"

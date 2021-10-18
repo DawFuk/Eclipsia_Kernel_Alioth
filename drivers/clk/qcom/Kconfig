@@ -527,9 +527,9 @@ config QM_DISPCC_SCUBA
 	  Say Y if you want to support display devices and functionality such as
 	  splash screen.
 
-config QM_GPUCC_SCUBA
-	tristate "SCUBA Graphics Clock Controller"
-	select QM_GCC_SCUBA
+config SM_GCC_6350
+	tristate "SM6350 Global Clock Controller"
+	select QCOM_GDSC
 	help
 	  Support for the graphics clock controller on Qualcomm Technologies, Inc.
 	  SCUBA devices.

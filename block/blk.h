@@ -64,8 +64,23 @@ static inline void queue_flag_set_unlocked(unsigned int flag,
 	__set_bit(flag, &q->queue_flags);
 }
 
-static inline void queue_flag_clear_unlocked(unsigned int flag,
-					     struct request_queue *q)
+bool is_flush_rq(struct request *req);
+
+struct blk_flush_queue *blk_alloc_flush_queue(int node, int cmd_size,
+					      gfp_t flags);
+void blk_free_flush_queue(struct blk_flush_queue *q);
+
+void blk_freeze_queue(struct request_queue *q);
+void __blk_mq_unfreeze_queue(struct request_queue *q, bool force_atomic);
+void blk_queue_start_drain(struct request_queue *q);
+
+#define BIO_INLINE_VECS 4
+struct bio_vec *bvec_alloc(mempool_t *pool, unsigned short *nr_vecs,
+		gfp_t gfp_mask);
+void bvec_free(mempool_t *pool, struct bio_vec *bv, unsigned short nr_vecs);
+
+static inline bool biovec_phys_mergeable(struct request_queue *q,
+		struct bio_vec *vec1, struct bio_vec *vec2)
 {
 	if (test_bit(QUEUE_FLAG_INIT_DONE, &q->queue_flags) &&
 	    kref_read(&q->kobj.kref))

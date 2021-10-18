@@ -337,10 +337,8 @@ static int __fpu__restore_sig(void __user *buf, void __user *buf_fx, int size)
 		if (using_compacted_format()) {
 			err = copy_user_to_xstate(&fpu->state.xsave, buf_fx);
 		} else {
-			err = __copy_from_user(&fpu->state.xsave, buf_fx, state_size);
-
-			if (!err && state_size > offsetof(struct xregs_state, header))
-				err = validate_xstate_header(&fpu->state.xsave.header);
+			/* Mask invalid bits out for historical reasons (broken hardware). */
+			fpu->state.fxsave.mxcsr &= mxcsr_feature_mask;
 		}
 
 		if (err || __copy_from_user(&env, buf, sizeof(env))) {

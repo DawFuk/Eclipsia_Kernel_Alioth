@@ -44,13 +44,35 @@ static int grts_cb(const void *data, void *private)
 {
 	const u16 *touch_info = data;
 	struct grts_state *st = private;
-	unsigned int x, y, press = 0x0;
+	unsigned int x, y, press = 0;
 
-	/* channel data coming in buffer in the order below */
-	x = touch_info[0];
-	y = touch_info[1];
-	if (st->pressure)
-		press = touch_info[2];
+	x = touch_info[st->ch_map[GRTS_CH_X]];
+	y = touch_info[st->ch_map[GRTS_CH_Y]];
+
+	if (st->ch_map[GRTS_CH_PRESSURE] < GRTS_MAX_CHANNELS) {
+		press = touch_info[st->ch_map[GRTS_CH_PRESSURE]];
+	} else if (st->ch_map[GRTS_CH_Z1] < GRTS_MAX_CHANNELS) {
+		unsigned int z1 = touch_info[st->ch_map[GRTS_CH_Z1]];
+		unsigned int z2 = touch_info[st->ch_map[GRTS_CH_Z2]];
+		unsigned int Rt;
+
+		if (likely(x && z1)) {
+			Rt = z2;
+			Rt -= z1;
+			Rt *= st->x_plate_ohms;
+			Rt = DIV_ROUND_CLOSEST(Rt, 16);
+			Rt *= x;
+			Rt /= z1;
+			Rt = DIV_ROUND_CLOSEST(Rt, 256);
+			/*
+			 * On increased pressure the resistance (Rt) is
+			 * decreasing so, convert values to make it looks as
+			 * real pressure.
+			 */
+			if (Rt < GRTS_DEFAULT_PRESSURE_MAX)
+				press = GRTS_DEFAULT_PRESSURE_MAX - Rt;
+		}
+	}
 
 	if ((!x && !y) || (st->pressure && (press < st->pressure_min))) {
 		/* report end of touch */

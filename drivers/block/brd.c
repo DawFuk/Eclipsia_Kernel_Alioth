@@ -363,10 +363,22 @@ static struct brd_device *brd_alloc(int i)
 	struct brd_device *brd;
 	struct gendisk *disk;
 
+	mutex_lock(&brd_devices_mutex);
+	list_for_each_entry(brd, &brd_devices, brd_list) {
+		if (brd->brd_number == i) {
+			mutex_unlock(&brd_devices_mutex);
+			return -EEXIST;
+		}
+	}
 	brd = kzalloc(sizeof(*brd), GFP_KERNEL);
-	if (!brd)
-		goto out;
+	if (!brd) {
+		mutex_unlock(&brd_devices_mutex);
+		return -ENOMEM;
+	}
 	brd->brd_number		= i;
+	list_add_tail(&brd->brd_list, &brd_devices);
+	mutex_unlock(&brd_devices_mutex);
+
 	spin_lock_init(&brd->brd_lock);
 	INIT_RADIX_TREE(&brd->brd_pages, GFP_ATOMIC);
 
@@ -397,14 +409,18 @@ static struct brd_device *brd_alloc(int i)
 	brd->brd_queue->backing_dev_info->capabilities |= BDI_CAP_SYNCHRONOUS_IO;
 
 	/* Tell the block layer that this is not a rotational device */
-	blk_queue_flag_set(QUEUE_FLAG_NONROT, brd->brd_queue);
-	blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, brd->brd_queue);
+	blk_queue_flag_set(QUEUE_FLAG_NONROT, disk->queue);
+	blk_queue_flag_clear(QUEUE_FLAG_ADD_RANDOM, disk->queue);
+	add_disk(disk);
 
 	return brd;
 
 out_free_queue:
 	blk_cleanup_queue(brd->brd_queue);
 out_free_dev:
+	mutex_lock(&brd_devices_mutex);
+	list_del(&brd->brd_list);
+	mutex_unlock(&brd_devices_mutex);
 	kfree(brd);
 out:
 	return NULL;
@@ -420,47 +436,18 @@ static void brd_free(struct brd_device *brd)
 
 static struct brd_device *brd_init_one(int i, bool *new)
 {
-	struct brd_device *brd;
-
-	*new = false;
-	list_for_each_entry(brd, &brd_devices, brd_list) {
-		if (brd->brd_number == i)
-			goto out;
-	}
-
-	brd = brd_alloc(i);
-	if (brd) {
-		brd->brd_disk->queue = brd->brd_queue;
-		add_disk(brd->brd_disk);
-		list_add_tail(&brd->brd_list, &brd_devices);
-	}
-	*new = true;
-out:
-	return brd;
+	brd_alloc(MINOR(dev) / max_part);
 }
 
 static void brd_del_one(struct brd_device *brd)
 {
-	list_del(&brd->brd_list);
 	del_gendisk(brd->brd_disk);
-	brd_free(brd);
-}
-
-static struct kobject *brd_probe(dev_t dev, int *part, void *data)
-{
-	struct brd_device *brd;
-	struct kobject *kobj;
-	bool new;
-
+	blk_cleanup_disk(brd->brd_disk);
+	brd_free_pages(brd);
 	mutex_lock(&brd_devices_mutex);
-	brd = brd_init_one(MINOR(dev) / max_part, &new);
-	kobj = brd ? get_disk_and_module(brd->brd_disk) : NULL;
+	list_del(&brd->brd_list);
 	mutex_unlock(&brd_devices_mutex);
-
-	if (new)
-		*part = 0;
-
-	return kobj;
+	kfree(brd);
 }
 
 static inline void brd_check_and_reset_par(void)
@@ -507,6 +494,8 @@ static int __init brd_init(void)
 
 	brd_check_and_reset_par();
 
+	brd_debugfs_dir = debugfs_create_dir("ramdisk_pages", NULL);
+
 	for (i = 0; i < rd_nr; i++) {
 		brd = brd_alloc(i);
 		if (!brd)
@@ -514,29 +503,15 @@ static int __init brd_init(void)
 		list_add_tail(&brd->brd_list, &brd_devices);
 	}
 
-	/* point of no return */
-
-	list_for_each_entry(brd, &brd_devices, brd_list) {
-		/*
-		 * associate with queue just before adding disk for
-		 * avoiding to mess up failure path
-		 */
-		brd->brd_disk->queue = brd->brd_queue;
-		add_disk(brd->brd_disk);
-	}
-
-	blk_register_region(MKDEV(RAMDISK_MAJOR, 0), 1UL << MINORBITS,
-				  THIS_MODULE, brd_probe, NULL, NULL);
-
 	pr_info("brd: module loaded\n");
 	return 0;
 
 out_free:
-	list_for_each_entry_safe(brd, next, &brd_devices, brd_list) {
-		list_del(&brd->brd_list);
-		brd_free(brd);
-	}
 	unregister_blkdev(RAMDISK_MAJOR, "ramdisk");
+	debugfs_remove_recursive(brd_debugfs_dir);
+
+	list_for_each_entry_safe(brd, next, &brd_devices, brd_list)
+		brd_del_one(brd);
 
 	pr_info("brd: module NOT loaded !!!\n");
 	return -ENOMEM;
@@ -546,11 +521,11 @@ static void __exit brd_exit(void)
 {
 	struct brd_device *brd, *next;
 
+	unregister_blkdev(RAMDISK_MAJOR, "ramdisk");
+	debugfs_remove_recursive(brd_debugfs_dir);
+
 	list_for_each_entry_safe(brd, next, &brd_devices, brd_list)
 		brd_del_one(brd);
-
-	blk_unregister_region(MKDEV(RAMDISK_MAJOR, 0), 1UL << MINORBITS);
-	unregister_blkdev(RAMDISK_MAJOR, "ramdisk");
 
 	pr_info("brd: module unloaded\n");
 }

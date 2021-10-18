@@ -3009,6 +3009,71 @@ static int __nvme_check_ids(struct nvme_subsystem *subsys,
 	return 0;
 }
 
+static void nvme_cdev_rel(struct device *dev)
+{
+	ida_simple_remove(&nvme_ns_chr_minor_ida, MINOR(dev->devt));
+}
+
+void nvme_cdev_del(struct cdev *cdev, struct device *cdev_device)
+{
+	cdev_device_del(cdev, cdev_device);
+	put_device(cdev_device);
+}
+
+int nvme_cdev_add(struct cdev *cdev, struct device *cdev_device,
+		const struct file_operations *fops, struct module *owner)
+{
+	int minor, ret;
+
+	minor = ida_simple_get(&nvme_ns_chr_minor_ida, 0, 0, GFP_KERNEL);
+	if (minor < 0)
+		return minor;
+	cdev_device->devt = MKDEV(MAJOR(nvme_ns_chr_devt), minor);
+	cdev_device->class = nvme_ns_chr_class;
+	cdev_device->release = nvme_cdev_rel;
+	device_initialize(cdev_device);
+	cdev_init(cdev, fops);
+	cdev->owner = owner;
+	ret = cdev_device_add(cdev, cdev_device);
+	if (ret)
+		put_device(cdev_device);
+
+	return ret;
+}
+
+static int nvme_ns_chr_open(struct inode *inode, struct file *file)
+{
+	return nvme_ns_open(container_of(inode->i_cdev, struct nvme_ns, cdev));
+}
+
+static int nvme_ns_chr_release(struct inode *inode, struct file *file)
+{
+	nvme_ns_release(container_of(inode->i_cdev, struct nvme_ns, cdev));
+	return 0;
+}
+
+static const struct file_operations nvme_ns_chr_fops = {
+	.owner		= THIS_MODULE,
+	.open		= nvme_ns_chr_open,
+	.release	= nvme_ns_chr_release,
+	.unlocked_ioctl	= nvme_ns_chr_ioctl,
+	.compat_ioctl	= compat_ptr_ioctl,
+};
+
+static int nvme_add_ns_cdev(struct nvme_ns *ns)
+{
+	int ret;
+
+	ns->cdev_device.parent = ns->ctrl->device;
+	ret = dev_set_name(&ns->cdev_device, "ng%dn%d",
+			   ns->ctrl->instance, ns->head->instance);
+	if (ret)
+		return ret;
+
+	return nvme_cdev_add(&ns->cdev, &ns->cdev_device, &nvme_ns_chr_fops,
+			     ns->ctrl->ops->module);
+}
+
 static struct nvme_ns_head *nvme_alloc_ns_head(struct nvme_ctrl *ctrl,
 		unsigned nsid, struct nvme_id_ns *id)
 {

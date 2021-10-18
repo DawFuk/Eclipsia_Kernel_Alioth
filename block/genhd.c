@@ -23,6 +23,7 @@
 #include <linux/badblocks.h>
 
 #include "blk.h"
+#include "blk-rq-qos.h"
 
 static DEFINE_MUTEX(block_class_lock);
 struct kobject *block_depr;
@@ -735,9 +736,9 @@ EXPORT_SYMBOL(device_add_disk);
 
 void device_add_disk_no_queue_reg(struct device *parent, struct gendisk *disk)
 {
-	__device_add_disk(parent, disk, false);
-}
-EXPORT_SYMBOL(device_add_disk_no_queue_reg);
+	struct request_queue *q = disk->queue;
+
+	might_sleep();
 
 void del_gendisk(struct gendisk *disk)
 {
@@ -762,13 +763,30 @@ void del_gendisk(struct gendisk *disk)
 	}
 	disk_part_iter_exit(&piter);
 
-	invalidate_partition(disk, 0);
-	bdev_unhash_inode(disk_devt(disk));
+	/*
+	 * Fail any new I/O.
+	 */
+	set_bit(GD_DEAD, &disk->state);
 	set_capacity(disk, 0);
 	disk->flags &= ~GENHD_FL_UP;
 	up_write(&disk->lookup_sem);
 
-	if (!(disk->flags & GENHD_FL_HIDDEN))
+	/*
+	 * Prevent new I/O from crossing bio_queue_enter().
+	 */
+	blk_queue_start_drain(q);
+	blk_mq_freeze_queue_wait(q);
+
+	rq_qos_exit(q);
+	blk_sync_queue(q);
+	blk_flush_integrity();
+	/*
+	 * Allow using passthrough request again after the queue is torn down.
+	 */
+	blk_queue_flag_clear(QUEUE_FLAG_INIT_DONE, q);
+	__blk_mq_unfreeze_queue(q, true);
+
+	if (!(disk->flags & GENHD_FL_HIDDEN)) {
 		sysfs_remove_link(&disk_to_dev(disk)->kobj, "bdi");
 	if (disk->queue) {
 		/*
@@ -1261,13 +1279,8 @@ int disk_expand_part_tbl(struct gendisk *disk, int partno)
 	int i, target;
 	size_t size;
 
-	/*
-	 * check for int overflow, since we can get here from blkpg_ioctl()
-	 * with a user passed 'partno'.
-	 */
-	target = partno + 1;
-	if (target < 0)
-		return -EINVAL;
+	might_sleep();
+	WARN_ON_ONCE(disk_live(disk));
 
 	/* disk_max_parts() is zero during initialization, ignore if so */
 	if (disk_max_parts(disk) && target > disk_max_parts(disk))

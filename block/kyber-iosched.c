@@ -87,6 +87,7 @@ struct kyber_ctx_queue {
 
 struct kyber_queue_data {
 	struct request_queue *q;
+	dev_t dev;
 
 	struct blk_stat_callback *cb;
 
@@ -211,10 +212,21 @@ static void kyber_adjust_rw_depth(struct kyber_queue_data *kqd,
 			break;
 		}
 	}
+	memset(buckets, 0, sizeof(kqd->latency_buckets[sched_domain][type]));
+
+	trace_kyber_latency(kqd->dev, kyber_domain_names[sched_domain],
+			    kyber_latency_type_names[type], percentile,
+			    bucket + 1, 1 << KYBER_LATENCY_SHIFT, samples);
+
+	return bucket;
+}
 
 	depth = clamp(depth, 1U, kyber_depth[sched_domain]);
 	if (depth != orig_depth)
 		sbitmap_queue_resize(&kqd->domain_tokens[sched_domain], depth);
+		trace_kyber_adjust(kqd->dev, kyber_domain_names[sched_domain],
+				   depth);
+	}
 }
 
 /*
@@ -314,6 +326,7 @@ static struct kyber_queue_data *kyber_queue_data_alloc(struct request_queue *q)
 	if (!kqd)
 		goto err;
 	kqd->q = q;
+	kqd->dev = disk_devt(q->disk);
 
 	kqd->cb = blk_stat_alloc_callback(kyber_stat_timer_fn, kyber_bucket_fn,
 					  KYBER_NUM_DOMAINS, kqd);
@@ -713,6 +726,9 @@ kyber_dispatch_cur_domain(struct kyber_queue_data *kqd,
 			rq_set_domain_token(rq, nr);
 			list_del_init(&rq->queuelist);
 			return rq;
+		} else {
+			trace_kyber_throttled(kqd->dev,
+					      kyber_domain_names[khd->cur_domain]);
 		}
 	} else if (sbitmap_any_bit_set(&khd->kcq_map[khd->cur_domain])) {
 		nr = kyber_get_domain_token(kqd, khd, hctx);
@@ -723,6 +739,9 @@ kyber_dispatch_cur_domain(struct kyber_queue_data *kqd,
 			rq_set_domain_token(rq, nr);
 			list_del_init(&rq->queuelist);
 			return rq;
+		} else {
+			trace_kyber_throttled(kqd->dev,
+					      kyber_domain_names[khd->cur_domain]);
 		}
 	}
 

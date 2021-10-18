@@ -289,8 +289,7 @@ efi_status_t allocate_new_fdt_and_exit_boot(efi_system_table_t *sys_table,
 		return status;
 	}
 
-	pr_efi(sys_table,
-	       "Exiting boot services and installing virtual address map...\n");
+	efi_info("Exiting boot services...\n");
 
 	map.map = &memory_map;
 	status = efi_high_alloc(sys_table, MAX_FDT_SIZE, EFI_FDT_ALIGN,

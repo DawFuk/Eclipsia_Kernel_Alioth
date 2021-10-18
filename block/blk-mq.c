@@ -191,16 +191,22 @@ void blk_mq_freeze_queue(struct request_queue *q)
 }
 EXPORT_SYMBOL_GPL(blk_mq_freeze_queue);
 
-void blk_mq_unfreeze_queue(struct request_queue *q)
+void __blk_mq_unfreeze_queue(struct request_queue *q, bool force_atomic)
 {
-	int freeze_depth;
-
-	freeze_depth = atomic_dec_return(&q->mq_freeze_depth);
-	WARN_ON_ONCE(freeze_depth < 0);
-	if (!freeze_depth) {
-		percpu_ref_reinit(&q->q_usage_counter);
+	mutex_lock(&q->mq_freeze_lock);
+	if (force_atomic)
+		q->q_usage_counter.data->force_atomic = true;
+	q->mq_freeze_depth--;
+	WARN_ON_ONCE(q->mq_freeze_depth < 0);
+	if (!q->mq_freeze_depth) {
+		percpu_ref_resurrect(&q->q_usage_counter);
 		wake_up_all(&q->mq_freeze_wq);
 	}
+}
+
+void blk_mq_unfreeze_queue(struct request_queue *q)
+{
+	__blk_mq_unfreeze_queue(q, false);
 }
 EXPORT_SYMBOL_GPL(blk_mq_unfreeze_queue);
 
