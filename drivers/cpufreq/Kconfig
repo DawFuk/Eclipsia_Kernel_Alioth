@@ -300,8 +300,6 @@ config MAX_BOOST_FREQ_PRIME
 
 endif
 
->>>>>>> 5c902ecab23e (cpumask: Refactor prime cluster cpumask)
-
 config CPUFREQ_DT
 	tristate "Generic DT based cpufreq driver"
 	depends on HAVE_CLK && OF
