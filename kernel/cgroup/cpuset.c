@@ -1853,8 +1853,6 @@ static s64 cpuset_read_s64(struct cgroup_subsys_state *css, struct cftype *cft)
 	return 0;
 }
 
-<<<<<<< HEAD
-=======
 #ifdef CONFIG_UCLAMP_TASK_GROUP
 int cpu_uclamp_min_show_wrapper(struct seq_file *sf, void *v);
 int cpu_uclamp_max_show_wrapper(struct seq_file *sf, void *v);
@@ -1914,7 +1912,6 @@ static int st_prefer_idle_write(struct cgroup_subsys_state *css,
 #endif
 
 #endif
->>>>>>> 5d18221b3a3b1 (kernel: cpuset: Preserve schedtune compatibility)
 
 /*
  * for the common functions, 'private' gives the type of file
@@ -2018,9 +2015,7 @@ static struct cftype files[] = {
 		.write_u64 = cpuset_write_u64,
 		.private = FILE_MEMORY_PRESSURE_ENABLED,
 	},
-<<<<<<< HEAD
 
-=======
 #ifdef CONFIG_UCLAMP_TASK_GROUP
 	{
 		.name = "uclamp.min",
@@ -2061,12 +2056,9 @@ static struct cftype files[] = {
 #endif
 
 #endif
->>>>>>> 5d18221b3a3b1 (kernel: cpuset: Preserve schedtune compatibility)
 	{ }	/* terminate */
 };
 
-<<<<<<< HEAD
-=======
 #ifdef CONFIG_UCLAMP_ASSIST
 struct ucl_param {
 	char *name;
@@ -2110,7 +2102,6 @@ static void uclamp_set(struct kernfs_open_file *of,
 }
 #endif
 
->>>>>>> 89c7e143bd913 (cpuset: uclamp_assist: Add camera-daemon to uclamp tunables)
 /*
  *	cpuset_css_alloc - allocate a cpuset css
  *	cgrp:	control group that the new cpuset will be part of
