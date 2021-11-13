@@ -167,6 +167,48 @@ static inline void arch_timer_set_cntkctl(u32 cntkctl)
 	: "=r" (tmp) : "r" (_val));					\
 } while (0)
 
+static __always_inline u64 __arch_counter_get_cntpct_stable(void)
+{
+	u64 cnt;
+
+	isb();
+	cnt = arch_timer_reg_read_stable(cntpct_el0);
+	arch_counter_enforce_ordering(cnt);
+	return cnt;
+}
+
+static __always_inline u64 __arch_counter_get_cntpct(void)
+{
+	u64 cnt;
+
+	isb();
+	cnt = read_sysreg(cntpct_el0);
+	arch_counter_enforce_ordering(cnt);
+	return cnt;
+}
+
+static __always_inline u64 __arch_counter_get_cntvct_stable(void)
+{
+	u64 cnt;
+
+	isb();
+	cnt = arch_timer_reg_read_stable(cntvct_el0);
+	arch_counter_enforce_ordering(cnt);
+	return cnt;
+}
+
+static __always_inline u64 __arch_counter_get_cntvct(void)
+{
+	u64 cnt;
+
+	isb();
+	cnt = read_sysreg(cntvct_el0);
+	arch_counter_enforce_ordering(cnt);
+	return cnt;
+}
+
+
+
 static inline u64 arch_counter_get_cntpct(void)
 {
 	u64 cnt;
