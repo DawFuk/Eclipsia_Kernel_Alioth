@@ -1332,6 +1332,7 @@ void end_page_writeback(struct page *page)
 
 	smp_mb__after_atomic();
 	wake_up_page(page, PG_writeback);
+	acct_reclaim_writeback(page);
 }
 EXPORT_SYMBOL(end_page_writeback);
 

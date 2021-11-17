@@ -811,6 +811,64 @@ static void handle_write_error(struct address_space *mapping,
 	unlock_page(page);
 }
 
+static void
+reclaim_throttle(pg_data_t *pgdat, enum vmscan_throttle_state reason,
+							long timeout)
+{
+	wait_queue_head_t *wqh = &pgdat->reclaim_wait[reason];
+	long ret;
+	DEFINE_WAIT(wait);
+
+	/*
+	 * Do not throttle IO workers, kthreads other than kswapd or
+	 * workqueues. They may be required for reclaim to make
+	 * forward progress (e.g. journalling workqueues or kthreads).
+	 */
+	if (!current_is_kswapd() &&
+	    current->flags & (PF_IO_WORKER|PF_KTHREAD))
+		return;
+
+	if (atomic_inc_return(&pgdat->nr_writeback_throttled) == 1) {
+		WRITE_ONCE(pgdat->nr_reclaim_start,
+			node_page_state(pgdat, NR_THROTTLED_WRITTEN));
+	}
+
+	prepare_to_wait(wqh, &wait, TASK_UNINTERRUPTIBLE);
+	ret = schedule_timeout(timeout);
+	finish_wait(wqh, &wait);
+	atomic_dec(&pgdat->nr_writeback_throttled);
+
+	trace_mm_vmscan_throttled(pgdat->node_id, jiffies_to_usecs(timeout),
+				jiffies_to_usecs(timeout - ret),
+				reason);
+}
+
+/*
+ * Account for pages written if tasks are throttled waiting on dirty
+ * pages to clean. If enough pages have been cleaned since throttling
+ * started then wakeup the throttled tasks.
+ */
+void __acct_reclaim_writeback(pg_data_t *pgdat, struct page *page,
+							int nr_throttled)
+{
+	unsigned long nr_written;
+
+	inc_node_page_state(page, NR_THROTTLED_WRITTEN);
+
+	/*
+	 * This is an inaccurate read as the per-cpu deltas may not
+	 * be synchronised. However, given that the system is
+	 * writeback throttled, it is not worth taking the penalty
+	 * of getting an accurate count. At worst, the throttle
+	 * timeout guarantees forward progress.
+	 */
+	nr_written = node_page_state(pgdat, NR_THROTTLED_WRITTEN) -
+		READ_ONCE(pgdat->nr_reclaim_start);
+
+	if (nr_written > SWAP_CLUSTER_MAX * nr_throttled)
+		wake_up(&pgdat->reclaim_wait[VMSCAN_THROTTLE_WRITEBACK]);
+}
+
 /* possible outcome of pageout() */
 typedef enum {
 	/* failed to write page out, page is locked */
@@ -2919,7 +2977,7 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 			 * faster than they are written so also forcibly stall.
 			 */
 			if (sc->nr.immediate)
-				congestion_wait(BLK_RW_ASYNC, HZ/10);
+			reclaim_throttle(pgdat, VMSCAN_THROTTLE_WRITEBACK, HZ/10);
 		}
 
 		/*
@@ -2938,7 +2996,7 @@ static bool shrink_node(pg_data_t *pgdat, struct scan_control *sc)
 		 */
 		if (!sc->hibernation_mode && !current_is_kswapd() &&
 		   current_may_throttle() && pgdat_memcg_congested(pgdat, root))
-			wait_iff_congested(BLK_RW_ASYNC, HZ/10);
+	       reclaim_throttle(pgdat, VMSCAN_THROTTLE_WRITEBACK, HZ/10);
 
 	} while (should_continue_reclaim(pgdat, sc->nr_reclaimed - nr_reclaimed,
 					 sc->nr_scanned - nr_scanned, sc));
@@ -3977,6 +4035,7 @@ static int kswapd(void *p)
 
 	WRITE_ONCE(pgdat->kswapd_order, 0);
 	WRITE_ONCE(pgdat->kswapd_classzone_idx, MAX_NR_ZONES);
+	atomic_set(&pgdat->nr_writeback_throttled, 0);
 	for ( ; ; ) {
 		bool ret;
 

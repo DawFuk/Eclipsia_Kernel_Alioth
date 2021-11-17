@@ -177,7 +177,6 @@ static inline int wb_congested(struct bdi_writeback *wb, int cong_bits)
 }
 
 long congestion_wait(int sync, long timeout);
-long wait_iff_congested(int sync, long timeout);
 
 static inline bool bdi_cap_synchronous_io(struct backing_dev_info *bdi)
 {
