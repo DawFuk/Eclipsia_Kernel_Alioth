@@ -3095,10 +3095,13 @@ static void binder_transaction(struct binder_proc *proc,
 		if (target_proc
 			&& target_proc->tsk
 			&& (task_uid(target_proc->tsk).val <= frozen_uid_min)) {
+			&& (task_uid(target_proc->tsk).val > 10000)
+			&& (proc->pid != target_proc->pid)) {
 			struct millet_data data;
 
 			memset(&data, 0, sizeof(struct millet_data));
 			data.pri[0] =  BINDER_REPLY;
+			data.pri[0] =  BINDER_TRANS;
 			data.mod.k_priv.binder.trans.src_task = proc->tsk;
 			data.mod.k_priv.binder.trans.caller_tid = thread->pid;
 			data.mod.k_priv.binder.trans.dst_task = target_proc->tsk;
@@ -3159,22 +3162,7 @@ static void binder_transaction(struct binder_proc *proc,
 			goto err_dead_binder;
 		}
 		e->to_node = target_node->debug_id;
-#ifdef CONFIG_MILLET
-		if (target_proc
-			&& target_proc->tsk
-			&& (task_uid(target_proc->tsk).val > 10000)
-			&& (proc->pid != target_proc->pid)) {
-			struct millet_data data;
 
-			memset(&data, 0, sizeof(struct millet_data));
-			data.pri[0] =  BINDER_TRANS;
-			data.mod.k_priv.binder.trans.src_task = proc->tsk;
-			data.mod.k_priv.binder.trans.caller_tid = thread->pid;
-			data.mod.k_priv.binder.trans.dst_task = target_proc->tsk;
-			data.mod.k_priv.binder.trans.tf_oneway = tr->flags & TF_ONE_WAY;
-			data.mod.k_priv.binder.trans.code = tr->code;
-			millet_sendmsg(BINDER_TYPE, target_proc->tsk, &data);
-		}
 		if (security_binder_transaction(proc->cred,
 						target_proc->cred) < 0) {
 			return_error = BR_FAILED_REPLY;
