@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2018-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2018-2019, 2021, The Linux Foundation. All rights reserved.
  */
 
 /*
@@ -1289,7 +1289,7 @@ enum drm_mode_status dp_mst_connector_mode_valid(
 		DP_ERR("invalid input\n");
 		return 0;
 	}
-
+	usleep_range(10, 12);
 	mst = dp_display->dp_mst_prv_info;
 	c_conn = to_sde_connector(connector);
 	mst_port = c_conn->mst_port;

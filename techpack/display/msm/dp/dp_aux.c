@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2019, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2019, 2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/soc/qcom/fsa4480-i2c.h>
@@ -652,6 +652,8 @@ static void dp_aux_init(struct dp_aux *dp_aux, struct dp_aux_cfg *aux_cfg)
 	atomic_set(&aux->aborted, 0);
 	aux->retry_cnt = 0;
 	aux->enabled = true;
+
+	drm_dp_cec_register_connector(&aux->drm_aux, "sde_dp_cec", aux->dev);
 }
 
 static void dp_aux_deinit(struct dp_aux *dp_aux)
@@ -671,6 +673,7 @@ static void dp_aux_deinit(struct dp_aux *dp_aux)
 	atomic_set(&aux->aborted, 1);
 	aux->catalog->enable(aux->catalog, false);
 	aux->enabled = false;
+	drm_dp_cec_unregister_connector(&aux->drm_aux);
 }
 
 static int dp_aux_register(struct dp_aux *dp_aux)

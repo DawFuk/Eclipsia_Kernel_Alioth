@@ -1,11 +1,12 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2012-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2012-2021, The Linux Foundation. All rights reserved.
  */
 
 #include "dp_panel.h"
 #include <linux/unistd.h>
 #include <drm/drm_fixed.h>
+#include <drm/drm_edid.h>
 #include "dp_debug.h"
 #include <drm/drm_edid.h>
 
@@ -1938,7 +1939,7 @@ static int dp_panel_set_default_link_params(struct dp_panel *dp_panel)
 	return 0;
 }
 
-static bool dp_panel_validate_edid(struct edid *edid, size_t edid_size)
+static int dp_panel_validate_edid(struct edid *edid, size_t edid_size)
 {
 	if (!edid || (edid_size < EDID_LENGTH))
 		return false;
@@ -1950,6 +1951,11 @@ static bool dp_panel_validate_edid(struct edid *edid, size_t edid_size)
 
 	if (!drm_edid_is_valid(edid)) {
 		DP_ERR("invalid edid.\n");
+		pr_err("edid size does not match allocated.\n");
+		return false;
+	}
+	if (!drm_edid_is_valid(edid)) {
+		pr_err("invalid edid.\n");
 		return false;
 	}
 	return true;
@@ -2316,6 +2322,7 @@ static int dp_panel_get_modes(struct dp_panel *dp_panel,
 	struct drm_connector *connector, struct dp_display_mode *mode)
 {
 	struct dp_panel_private *panel;
+	int count = 0;
 
 	if (!dp_panel) {
 		DP_ERR("invalid input\n");
@@ -2328,7 +2335,11 @@ static int dp_panel_get_modes(struct dp_panel *dp_panel,
 		dp_panel_set_test_mode(panel, mode);
 		return 1;
 	} else if (dp_panel->edid_ctrl->edid) {
-		return _sde_edid_update_modes(connector, dp_panel->edid_ctrl);
+		count =  _sde_edid_update_modes(connector, dp_panel->edid_ctrl);
+		if (count)
+			drm_dp_cec_set_edid(panel->aux->drm_aux,
+				dp_panel->edid_ctrl->edid);
+		return count;
 	}
 
 	/* fail-safe mode */
@@ -2674,6 +2685,7 @@ static int dp_panel_deinit_panel_info(struct dp_panel *dp_panel, u32 flags)
 	shdr_if_sdp = &panel->catalog->shdr_if_sdp;
 	vsc_colorimetry = &panel->catalog->vsc_colorimetry;
 
+	drm_dp_cec_unset_edid(panel->aux->drm_aux);
 	if (!panel->custom_edid && dp_panel->edid_ctrl->edid)
 		sde_free_edid((void **)&dp_panel->edid_ctrl);
 

@@ -1892,9 +1892,6 @@ int sde_crtc_get_secure_transition_ops(struct drm_crtc *crtc,
 	mutex_lock(&sde_kms->secure_transition_lock);
 
 	switch (translation_mode) {
-	case SDE_DRM_FB_SEC_DIR_TRANS:
-		_sde_drm_fb_sec_dir_trans(smmu_state, secure_level,
-			catalog, old_valid_fb, &ops, old_crtc_state);
 		if (clone_mode && (ops & SDE_KMS_OPS_SECURE_STATE_CHANGE))
 			ops |= SDE_KMS_OPS_WAIT_FOR_TX_DONE;
 		break;
@@ -4483,6 +4480,20 @@ static int _sde_crtc_check_secure_state_smmu_translation(struct drm_crtc *crtc,
 
 	if (_sde_crtc_check_secure_transition(crtc, state, is_video_mode))
 		goto sec_err;
+
+	/*
+	 * Secure display to secure camera needs without direct
+	 * transition is currently not allowed
+	 */
+	if (fb_sec_dir && secure == SDE_DRM_SEC_NON_SEC &&
+		smmu_state->state != ATTACHED &&
+		smmu_state->secure_level == SDE_DRM_SEC_ONLY) {
+
+		SDE_EVT32(DRMID(crtc), fb_ns, fb_sec_dir,
+			smmu_state->state, smmu_state->secure_level,
+			secure);
+		goto sec_err;
+	}
 
 	/*
 	 * In video mode check for null commit before transition

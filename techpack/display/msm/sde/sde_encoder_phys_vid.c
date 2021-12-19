@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2015-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2015-2021, The Linux Foundation. All rights reserved.
  */
 
 #define pr_fmt(fmt)	"[drm:%s:%d] " fmt, __func__, __LINE__
@@ -1174,6 +1174,37 @@ static void sde_encoder_phys_vid_irq_control(struct sde_encoder_phys *phys_enc,
 	}
 }
 
+static void sde_encoder_phys_vid_update_split_role(
+		struct sde_encoder_phys *phys_enc,
+		enum sde_enc_split_role role)
+{
+	struct sde_encoder_phys_vid *vid_enc;
+	enum sde_enc_split_role old_role;
+	bool is_ppsplit;
+
+	if (!phys_enc)
+		return;
+
+	vid_enc = to_sde_encoder_phys_vid(phys_enc);
+	old_role = phys_enc->split_role;
+	is_ppsplit = _sde_encoder_phys_is_ppsplit(phys_enc);
+
+	phys_enc->split_role = role;
+
+	SDE_DEBUG_VIDENC(vid_enc, "old role %d new role %d\n",
+		old_role, role);
+
+	/*
+	 * ppsplit solo needs to reprogram because intf may have swapped without
+	 * role changing on left-only, right-only back-to-back commits
+	 */
+	if (!(is_ppsplit && role == ENC_ROLE_SOLO) &&
+		(role == old_role || role == ENC_ROLE_SKIP))
+		return;
+
+	sde_encoder_helper_split_config(phys_enc, phys_enc->intf_idx);
+}
+
 static int sde_encoder_phys_vid_get_line_count(
 		struct sde_encoder_phys *phys_enc)
 {
@@ -1271,6 +1302,7 @@ static void sde_encoder_phys_vid_init_ops(struct sde_encoder_phys_ops *ops)
 	ops->wait_for_vblank = sde_encoder_phys_vid_wait_for_vblank_no_notify;
 	ops->wait_for_tx_complete = sde_encoder_phys_vid_wait_for_vblank;
 	ops->irq_control = sde_encoder_phys_vid_irq_control;
+	ops->update_split_role = sde_encoder_phys_vid_update_split_role;
 	ops->prepare_for_kickoff = sde_encoder_phys_vid_prepare_for_kickoff;
 	ops->handle_post_kickoff = sde_encoder_phys_vid_handle_post_kickoff;
 	ops->needs_single_flush = sde_encoder_phys_needs_single_flush;

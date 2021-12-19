@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/of.h>
@@ -1395,6 +1395,19 @@ void dsi_display_clk_mngr_update_splash_status(void *clk_mgr, bool status)
 
 	mngr = (struct dsi_clk_mngr *)clk_mgr;
 	mngr->is_cont_splash_enabled = status;
+}
+
+void dsi_display_clk_mngr_update_ctrl_count(void *clk_mgr, u32 ctrl_count)
+{
+	struct dsi_clk_mngr *mngr;
+
+	if (!clk_mgr) {
+		DSI_ERR("Invalid params\n");
+		return;
+	}
+
+	mngr = (struct dsi_clk_mngr *)clk_mgr;
+	mngr->dsi_ctrl_count = ctrl_count;
 }
 
 void *dsi_display_clk_mngr_register(struct dsi_clk_info *info)

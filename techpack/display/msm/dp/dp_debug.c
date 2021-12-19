@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2017-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2017-2019, 2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/debugfs.h>
@@ -1627,8 +1627,7 @@ static void dp_debug_set_sim_mode(struct dp_debug_private *debug, bool sim)
 
 		debug->aux->set_sim_mode(debug->aux, false, NULL, NULL);
 		debug->dp_debug.sim_mode = false;
-
-		debug->panel->set_edid(debug->panel, 0, 0);
+		debug->panel->set_edid(debug->panel, NULL, 0);
 		if (debug->edid) {
 			devm_kfree(debug->dev, debug->edid);
 			debug->edid = NULL;

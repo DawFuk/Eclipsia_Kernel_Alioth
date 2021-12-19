@@ -378,9 +378,7 @@ struct sde_crtc {
 	spinlock_t ltm_lock;
 	bool needs_hw_reset;
 	int hist_irq_idx;
-
 	int comp_ratio;
-
 	struct drm_property_blob *dspp_blob_info;
 };
 

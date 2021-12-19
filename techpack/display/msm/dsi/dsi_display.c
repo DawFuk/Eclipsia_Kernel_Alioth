@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-2.0-only
 /*
- * Copyright (c) 2016-2020, The Linux Foundation. All rights reserved.
+ * Copyright (c) 2016-2021, The Linux Foundation. All rights reserved.
  */
 
 #include <linux/list.h>
@@ -5877,6 +5877,9 @@ static int dsi_display_ext_get_info(struct drm_connector *connector,
 		return -EINVAL;
 	}
 
+	if (display->panel->num_timing_nodes)
+		return dsi_display_get_info(connector, info, disp);
+
 	mutex_lock(&display->display_lock);
 
 	memset(info, 0, sizeof(struct msm_display_info));
@@ -5907,22 +5910,26 @@ static int dsi_display_ext_get_mode_info(struct drm_connector *connector,
 	void *display, const struct msm_resource_caps_info *avail_res)
 {
 	struct msm_display_topology *topology;
+	struct dsi_display *ext_display = (struct dsi_display *)display;
 
 	if (!drm_mode || !mode_info ||
 			!avail_res || !avail_res->max_mixer_width)
 		return -EINVAL;
 
+	if (ext_display->panel->num_timing_nodes)
+		return dsi_conn_get_mode_info(connector, drm_mode,
+			mode_info, display, avail_res);
+
 	memset(mode_info, 0, sizeof(*mode_info));
 	mode_info->frame_rate = drm_mode->vrefresh;
 	mode_info->vtotal = drm_mode->vtotal;
+	mode_info->comp_info.comp_type = MSM_DISPLAY_COMPRESSION_NONE;
 
 	topology = &mode_info->topology;
 	topology->num_lm = (avail_res->max_mixer_width
 			<= drm_mode->hdisplay) ? 2 : 1;
 	topology->num_enc = 0;
 	topology->num_intf = topology->num_lm;
-
-	mode_info->comp_info.comp_type = MSM_DISPLAY_COMPRESSION_NONE;
 
 	return 0;
 }
@@ -6665,6 +6672,11 @@ int dsi_display_get_panel_vfp(void *dsi_display,
 	mutex_lock(&display->display_lock);
 
 	count = display->panel->num_display_modes;
+	if (!count && display->ext_conn) {
+		mutex_unlock(&display->display_lock);
+		DSI_DEBUG("external bridge did not have timing node\n");
+		return -EPERM;
+	}
 
 	if (display->panel->cur_mode)
 		refresh_rate = display->panel->cur_mode->timing.refresh_rate;
