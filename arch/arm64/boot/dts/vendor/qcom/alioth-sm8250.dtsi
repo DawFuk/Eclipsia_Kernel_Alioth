@@ -274,7 +274,7 @@ this file is for attribution only of alioth
 		status = "ok";
 		compatible = "focaltech,fts";
 		reg = <0x0>;
-		spi-max-frequency = <28500000>;
+		spi-max-frequency = <50000000>;
 		interrupt-parent = <&tlmm>;
 		interrupts = <39 0x2008>;
 		pinctrl-names = "pmx_ts_active", "pmx_ts_suspend", "pmx_ts_release";
