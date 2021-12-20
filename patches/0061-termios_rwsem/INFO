@@ -1,0 +1,11 @@
+use old locking for struct tty_struct
+
+With kernel 3.12 a new locking was added to struct tty_struct. This
+patch makes the code use the old locking.
+
+The new locking was added in this commit:
+commit 6a1c0680cf3ba94356ecd58833e1540c93472a57
+Author: Peter Hurley <peter@hurleysoftware.com>
+Date:   Sat Jun 15 09:14:23 2013 -0400
+
+    tty: Convert termios_mutex to termios_rwsem

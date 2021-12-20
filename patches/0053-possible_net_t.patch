@@ -1,0 +1,19 @@
+diff --git a/include/net/cfg80211.h b/include/net/cfg80211.h
+index 04e5785..a251da1 100644
+--- a/include/net/cfg80211.h
++++ b/include/net/cfg80211.h
+@@ -4119,12 +4119,12 @@ struct wiphy {
+ 
+ static inline struct net *wiphy_net(struct wiphy *wiphy)
+ {
+-	return read_pnet(&wiphy->_net);
++	return possible_read_pnet(&wiphy->_net);
+ }
+ 
+ static inline void wiphy_net_set(struct wiphy *wiphy, struct net *net)
+ {
+-	write_pnet(&wiphy->_net, net);
++	possible_write_pnet(&wiphy->_net, net);
+ }
+ 
+ /**

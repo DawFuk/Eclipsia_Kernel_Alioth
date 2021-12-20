@@ -1,0 +1,83 @@
+# List the minimum kernel version required for each
+# of the listed Kconfig symbols
+
+# depends on -EPROBE_DEFER and others now
+WL1251_SPI 3.5
+
+WL1251_SDIO 3.15
+WL1251_SDIO kconfig: CONFIG_WILINK_PLATFORM_DATA
+WLCORE_SDIO 3.15
+
+# needs no_seek_end_llseek()
+WLCORE 3.2
+WL12XX 3.2
+WL18XX 3.2
+
+# hostapd uses proc_create_single_data()
+HOSTAP 4.18
+ATMEL 4.18
+
+# This driver uses the remove_proc_subtree() function.
+AIRO 3.9
+AIRO_CS 3.9
+
+# pci_error_handlers->reset_notify is missing
+MWIFIEX_PCIE 3.16
+
+# needs pcie_get_mps()
+QTNFMAC_PEARL_PCIE 3.13
+
+# needs pm_system_wakeup() which can't reall be
+# backported properly
+MWIFIEX 3.18
+
+BCMA_DRIVER_MIPS 3.3
+SSB_DRIVER_MIPS 3.3
+# needs GPIO stuff we didn't backport
+SSB_DRIVER_GPIO 4.5
+
+# the irq handler in the gpio driver uses
+# irq_set_chip_and_handler_name() which gets exported starting with
+# kernel 3.7. This code is only compiled if BCMA_DRIVER_GPIO and
+# BCMA_HOST_SOC are set.
+BCMA_HOST_SOC 3.7
+
+# Uses gpiochip_get_data()
+BCMA_DRIVER_GPIO 4.5
+
+# tracing results in compile errors
+ATH10K_TRACING 3.4
+ATH_TRACEPOINTS 3.1
+
+# missigng add_hwgenerator_randomness()
+ATH9K_HWRNG 3.17
+
+# This driver needs mmc_hw_reset() which was added in kernel version 3.2
+MWIFIEX_SDIO 3.2
+
+# these need LIB80211 and thus SKCIPHER - disable them
+IPW2100 4.3
+IPW2200 4.3
+HOSTAP 4.3
+LIBERTAS 4.3
+R8188EU 4.3
+
+# struct ethtool_link_ksettings is missing, I'm lazy
+USB_USBNET 4.6
+USB_NET_RNDIS_WLAN 4.6
+
+# depends on struct mmc_card::ocr
+RSI_SDIO 3.13
+
+# For Coexsitence the BT driver has to export rsi_bt_ops
+RSI_COEX 4.17
+
+# depends on devm_led_classdev_register()
+# (can't use MT76_CORE for this as it's selected)
+MT76x0U 4.1
+MT76x2E 4.1
+MT76x2U 4.1
+
+# select_queue_fallback_t is missing
+RTL8723BS 3.14
+R8188EU  3.14

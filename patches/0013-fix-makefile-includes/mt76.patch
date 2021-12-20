@@ -1,0 +1,49 @@
+From db6bb5c6c19451faa935934e6b45416fd7dd777a Mon Sep 17 00:00:00 2001
+From: Felix Fietkau <nbd@nbd.name>
+Date: Mon, 24 Sep 2018 11:13:11 +0200
+Subject: mt76: include linux/module.h in files using MODULE_*
+
+Fix source files using MODULE_* macros without including linux/module.h
+
+Signed-off-by: Felix Fietkau <nbd@nbd.name>
+
+--- a/drivers/net/wireless/mediatek/mt76/mt76x0/eeprom.c
++++ b/drivers/net/wireless/mediatek/mt76/mt76x0/eeprom.c
+@@ -13,6 +13,7 @@
+  * GNU General Public License for more details.
+  */
+ 
++#include <linux/module.h>
+ #include <linux/of.h>
+ #include <linux/mtd/mtd.h>
+ #include <linux/mtd/partitions.h>
+--- a/drivers/net/wireless/mediatek/mt76/usb_mcu.c
++++ b/drivers/net/wireless/mediatek/mt76/usb_mcu.c
+@@ -14,6 +14,7 @@
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
++#include <linux/module.h>
+ #include <linux/firmware.h>
+ 
+ #include "mt76.h"
+--- a/drivers/net/wireless/mediatek/mt76/mt76x2_eeprom.c
++++ b/drivers/net/wireless/mediatek/mt76/mt76x2_eeprom.c
+@@ -14,6 +14,7 @@
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
++#include <linux/module.h>
+ #include <asm/unaligned.h>
+ #include "mt76x2.h"
+ #include "mt76x2_eeprom.h"
+--- a/drivers/net/wireless/mediatek/mt76/usb.c
++++ b/drivers/net/wireless/mediatek/mt76/usb.c
+@@ -14,6 +14,7 @@
+  * OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+  */
+ 
++#include <linux/module.h>
+ #include "mt76.h"
+ #include "usb_trace.h"
+ #include "dma.h"

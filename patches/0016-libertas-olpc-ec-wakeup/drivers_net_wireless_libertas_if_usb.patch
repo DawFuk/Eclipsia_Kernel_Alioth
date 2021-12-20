@@ -1,0 +1,18 @@
+--- a/drivers/net/wireless/marvell/libertas/if_usb.c
++++ b/drivers/net/wireless/marvell/libertas/if_usb.c
+@@ -939,6 +939,7 @@ static int if_usb_suspend(struct usb_int
+ 		goto out;
+ 	}
+ 
++#if LINUX_VERSION_IS_GEQ(3,1,0)
+ #ifdef CONFIG_OLPC
+ 	if (machine_is_olpc()) {
+ 		if (priv->wol_criteria == EHS_REMOVE_WAKEUP)
+@@ -947,6 +948,7 @@ static int if_usb_suspend(struct usb_int
+ 			olpc_ec_wakeup_set(EC_SCI_SRC_WLAN);
+ 	}
+ #endif
++#endif
+ 
+ 	ret = lbs_suspend(priv);
+ 	if (ret)

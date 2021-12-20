@@ -1,0 +1,16 @@
+GRO_CONSUMED was added in kernel commit 25393d3fc055 ("net: Prepare gro 
+for packet consuming gro callbacks") in kernel 4.11. Just remove it for 
+older kernel versions.
+
+--- a/drivers/net/wireless/ath/wil6210/txrx.c
++++ b/drivers/net/wireless/ath/wil6210/txrx.c
+@@ -737,7 +737,9 @@ void wil_netif_rx_any(struct sk_buff *sk
+ 		[GRO_HELD]		= "GRO_HELD",
+ 		[GRO_NORMAL]		= "GRO_NORMAL",
+ 		[GRO_DROP]		= "GRO_DROP",
++#if LINUX_VERSION_IS_GEQ(4,11,0)
+ 		[GRO_CONSUMED]		= "GRO_CONSUMED",
++#endif /* > 4.11 */
+ 	};
+ 
+ 	wil->txrx_ops.get_netif_rx_params(skb, &cid, &security);

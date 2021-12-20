@@ -1,0 +1,64 @@
+--- a/compat/verification/pkcs7_trust.c
++++ b/compat/verification/pkcs7_trust.c
+@@ -116,7 +116,7 @@ static int pkcs7_validate_trust_one(stru
+ 	return -ENOKEY;
+ 
+ matched:
+-	ret = verify_signature(key, sig);
++	ret = public_key_verify_signature(key->public_key, sig);
+ 	key_put(key);
+ 	if (ret < 0) {
+ 		if (ret == -ENOMEM)
+--- a/compat/verification/x509_public_key.c
++++ b/compat/verification/x509_public_key.c
+@@ -13,11 +13,8 @@
+ #include <linux/module.h>
+ #include <linux/kernel.h>
+ #include <linux/slab.h>
+-#include <keys/asymmetric-subtype.h>
+-#include <keys/asymmetric-parser.h>
+ #include <keys/system_keyring.h>
+ #include <crypto/hash.h>
+-#include "asymmetric_keys.h"
+ #include "x509_parser.h"
+ 
+ /*
+@@ -155,6 +152,7 @@ not_self_signed:
+ 	return 0;
+ }
+ 
++#if 0
+ /*
+  * Attempt to parse a data blob for a key as an X509 certificate.
+  */
+@@ -273,3 +271,4 @@ module_exit(x509_key_exit);
+ MODULE_DESCRIPTION("X.509 certificate parser");
+ MODULE_AUTHOR("Red Hat, Inc.");
+ MODULE_LICENSE("GPL");
++#endif
+--- a/include/crypto/pkcs7.h
++++ b/include/crypto/pkcs7.h
+@@ -2,5 +2,10 @@
+ #ifndef CPTCFG_BPAUTO_PKCS7
+ #include_next <crypto/pkcs7.h>
+ #else
++#define pkcs7_verify LINUX_BACKPORT(pkcs7_verify)
++#define pkcs7_get_content_data LINUX_BACKPORT(pkcs7_get_content_data)
++#define pkcs7_parse_message LINUX_BACKPORT(pkcs7_parse_message)
++#define pkcs7_free_message LINUX_BACKPORT(pkcs7_free_message)
++#define pkcs7_validate_trust LINUX_BACKPORT(pkcs7_validate_trust)
+ #include <crypto/backport-pkcs7.h>
+ #endif /* CPTCFG_BPAUTO_PKCS7 */
+--- a/compat/verification/x509_parser.h
++++ b/compat/verification/x509_parser.h
+@@ -13,6 +13,10 @@
+ #include <crypto/public_key.h>
+ #include <keys/asymmetric-type.h>
+ 
++#define x509_decode_time LINUX_BACKPORT(x509_decode_time)
++#define x509_cert_parse LINUX_BACKPORT(x509_cert_parse)
++#define x509_free_certificate LINUX_BACKPORT(x509_free_certificate)
++
+ struct x509_certificate {
+ 	struct x509_certificate *next;
+ 	struct x509_certificate *signer;	/* Certificate that signed this one */

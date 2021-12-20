@@ -1,0 +1,134 @@
+#
+# This file specifies which sources are copied from the kernel
+# into the backports package.
+#
+# Directories must end with a slash (e.g. "net/wireless/") and
+# are then copied with all their contents.
+#
+# It is also possible to rename while copying, to do so list
+# old name -> new name
+# Note that in this case the spaces are needed: " -> "
+#
+
+COPYING
+LICENSES/
+Documentation/process/license-rules.rst
+MAINTAINERS
+include/linux/unaligned/
+include/linux/hashtable.h
+include/linux/fixp-arith.h
+include/linux/crc32poly.h
+
+# This just defines some macros, simply take it
+include/linux/bitfield.h
+include/linux/average.h
+include/linux/overflow.h
+
+# crypto_memneq
+crypto/memneq.c -> compat/memneq.c
+
+# 802.11
+drivers/net/wireless/Kconfig
+drivers/net/wireless/Makefile
+
+include/linux/wireless.h
+include/uapi/linux/wireless.h
+include/linux/ieee80211.h
+include/linux/pci_ids.h
+include/uapi/linux/pci_regs.h
+include/linux/mmc/sdio_ids.h
+include/linux/ath9k_platform.h
+include/linux/wl12xx.h
+include/linux/rndis.h
+include/linux/bcm47xx_wdt.h
+include/linux/usb/usbnet.h
+include/linux/usb/cdc.h
+include/uapi/linux/usb/cdc.h
+include/uapi/linux/usb/cdc-wdm.h
+include/linux/usb/cdc_ncm.h
+include/linux/usb/cdc-wdm.h
+include/linux/usb/rndis_host.h
+include/linux/spi/libertas_spi.h
+include/linux/platform_data/brcmfmac.h
+include/linux/platform_data/net-cw1200.h
+include/uapi/linux/nl80211.h
+include/net/rsi_91x.h
+
+include/net/cfg80211.h
+include/net/cfg80211-wext.h
+include/net/ieee80211_radiotap.h
+include/net/lib80211.h
+include/net/mac80211.h
+include/net/regulatory.h
+include/net/codel.h
+include/net/codel_impl.h
+include/net/codel_qdisc.h
+include/net/fq.h
+include/net/fq_impl.h
+
+# signature verification code
+include/linux/asn1.h
+include/linux/asn1_ber_bytecode.h
+include/linux/oid_registry.h
+lib/build_OID_registry -> compat/build_OID_registry
+crypto/asymmetric_keys/pkcs7_parser.c -> compat/verification/pkcs7_parser.c
+crypto/asymmetric_keys/pkcs7_parser.h -> compat/verification/pkcs7_parser.h
+crypto/asymmetric_keys/pkcs7_trust.c -> compat/verification/pkcs7_trust.c
+crypto/asymmetric_keys/pkcs7_verify.c -> compat/verification/pkcs7_verify.c
+crypto/asymmetric_keys/x509_cert_parser.c -> compat/verification/x509_cert_parser.c
+crypto/asymmetric_keys/x509_parser.h -> compat/verification/x509_parser.h
+crypto/asymmetric_keys/x509_public_key.c -> compat/verification/x509_public_key.c
+
+net/Makefile
+net/Kconfig
+net/wireless/
+net/mac80211/
+# MPLS labels, checked on skb->protocol on the
+# respective 802 family, only ethernet seems to use
+# this right now, see 960d97f95
+include/linux/mpls.h
+include/uapi/linux/mpls.h
+
+drivers/net/wireless/ath/
+drivers/ssb/
+include/linux/ssb/
+drivers/bcma/
+include/linux/bcma/
+drivers/net/wireless/cisco/
+drivers/net/wireless/atmel/
+drivers/net/wireless/broadcom/
+drivers/net/wireless/st/
+drivers/net/wireless/intel/
+drivers/net/wireless/ralink/
+drivers/net/wireless/zydas/
+drivers/net/wireless/marvell/
+drivers/net/wireless/intersil/
+drivers/net/wireless/quantenna/
+drivers/net/wireless/realtek/
+drivers/net/wireless/ti/
+drivers/net/wireless/mediatek/
+drivers/net/wireless/admtek/
+drivers/net/wireless/mac80211_hwsim.c
+drivers/net/wireless/mac80211_hwsim.h
+drivers/net/wireless/rsi/
+drivers/net/wireless/rndis_wlan.c
+# rndis also requires some of the USB networking
+drivers/net/usb/Makefile
+drivers/net/usb/Kconfig
+drivers/net/usb/rndis_host.c
+drivers/net/usb/cdc_ether.c
+drivers/net/usb/usbnet.c
+
+drivers/staging/Makefile
+drivers/staging/Kconfig
+drivers/staging/rtlwifi/
+drivers/staging/rtl8188eu/
+drivers/staging/rtl8723bs/
+
+drivers/usb/class/Makefile
+drivers/usb/class/Kconfig
+drivers/usb/class/cdc-wdm.c
+drivers/net/usb/cdc_mbim.c
+drivers/net/usb/cdc_ncm.c
+drivers/net/usb/sierra_net.c
+drivers/net/usb/qmi_wwan.c

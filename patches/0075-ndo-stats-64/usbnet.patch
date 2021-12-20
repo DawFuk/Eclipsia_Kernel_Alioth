@@ -1,0 +1,24 @@
+--- a/drivers/net/usb/usbnet.c
++++ b/drivers/net/usb/usbnet.c
+@@ -1025,6 +1025,9 @@ void usbnet_get_stats64(struct net_devic
+ 	}
+ }
+ EXPORT_SYMBOL_GPL(usbnet_get_stats64);
++#if LINUX_VERSION_IS_LESS(4,11,0)
++EXPORT_SYMBOL_GPL(bp_usbnet_get_stats64);
++#endif
+ 
+ u32 usbnet_get_link (struct net_device *net)
+ {
+--- a/include/linux/usb/usbnet.h
++++ b/include/linux/usb/usbnet.h
+@@ -287,5 +287,9 @@ extern void usbnet_status_stop(struct us
+ extern void usbnet_update_max_qlen(struct usbnet *dev);
+ extern void usbnet_get_stats64(struct net_device *dev,
+ 			       struct rtnl_link_stats64 *stats);
++#if LINUX_VERSION_IS_LESS(4,11,0)
++struct rtnl_link_stats64 *
++bp_usbnet_get_stats64(struct net_device *dev, struct rtnl_link_stats64 *stats);
++#endif
+ 
+ #endif /* __LINUX_USB_USBNET_H */

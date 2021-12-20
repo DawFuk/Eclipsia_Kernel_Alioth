@@ -1,0 +1,17 @@
+In kernel 3.16 struct net_device_ops changed and renamed pointer
+ndo_set_vf_tx_rate to ndo_set_vf_rate.
+
+commit ed616689a3d95eb6c9bdbb1ef74b0f50cbdf276a
+Author: Sucheta Chakraborty <sucheta.chakraborty@qlogic.com>
+Date:   Thu May 22 09:59:05 2014 -0400
+
+    net-next:v4: Add support to configure SR-IOV VF minimum and maximum Tx rate through ip tool.
+
+commit 5f8444a3fa617076f8da51a3e8ecce01a5d7f738
+Author: Greg Rose <gregory.v.rose@intel.com>
+Date:   Sat Oct 8 03:05:24 2011 +0000
+
+    if_link: Add additional parameter to IFLA_VF_INFO for spoof checking
+
+git describe --contains ed616689a3d95eb6c9bdbb1ef74b0f50cbdf276a
+v3.16-rc1~27^2~151

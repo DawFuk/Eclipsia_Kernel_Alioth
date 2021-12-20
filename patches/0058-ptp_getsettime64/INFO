@@ -1,0 +1,11 @@
+In kernel 4.1 struct ptp_clock_info changes function pointers gettime,
+settime to gettime64, settime64.
+
+commit 92f1719407b90475b3be0b7b9c983dec2ff8351e
+Author: Richard Cochran <richardcochran@gmail.com>
+Date:   Sun Mar 29 23:11:51 2015 +0200
+
+    ptp: introduce get/set time methods with explicit 64 bit seconds.
+
+git describe --contains 92f1719407b90475b3be0b7b9c983dec2ff8351e
+next-20150401~92^2~18^2~22

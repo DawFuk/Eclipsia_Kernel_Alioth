@@ -1,0 +1,12 @@
+--- a/drivers/net/wireless/mediatek/mt7601u/trace.c
++++ b/drivers/net/wireless/mediatek/mt7601u/trace.c
+@@ -13,6 +13,9 @@
+  */
+ 
+ #include <linux/module.h>
++#if LINUX_VERSION_IS_LESS(3,4,0)
++#include <linux/interrupt.h>
++#endif
+ 
+ #ifndef __CHECKER__
+ #define CREATE_TRACE_POINTS

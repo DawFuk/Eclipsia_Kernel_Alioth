@@ -1,0 +1,87 @@
+--- a/drivers/net/wireless/intel/iwlwifi/dvm/debugfs.c
++++ b/drivers/net/wireless/intel/iwlwifi/dvm/debugfs.c
+@@ -2419,12 +2419,23 @@ int iwl_dbgfs_register(struct iwl_priv *
+ 	 */
+ 	if (priv->mac80211_registered) {
+ 		char buf[100];
++#if LINUX_VERSION_IS_GEQ(3,12,0)
+ 		struct dentry *mac80211_dir, *dev_dir;
+ 
+ 		dev_dir = dbgfs_dir->d_parent;
+ 		mac80211_dir = priv->hw->wiphy->debugfsdir;
+ 
+ 		snprintf(buf, 100, "../../%pd2", dev_dir);
++#else
++		struct dentry *mac80211_dir, *dev_dir, *root_dir;
++
++		dev_dir = dbgfs_dir->d_parent;
++		root_dir = dev_dir->d_parent;
++		mac80211_dir = priv->hw->wiphy->debugfsdir;
++
++		snprintf(buf, 100, "../../%s/%s", root_dir->d_name.name,
++			 dev_dir->d_name.name);
++#endif
+ 
+ 		if (!debugfs_create_symlink("iwlwifi", mac80211_dir, buf))
+ 			goto err;
+--- a/drivers/net/wireless/intel/iwlwifi/mvm/debugfs-vif.c
++++ b/drivers/net/wireless/intel/iwlwifi/mvm/debugfs-vif.c
+@@ -1500,8 +1500,13 @@ void iwl_mvm_vif_dbgfs_register(struct i
+ 	mvmvif->dbgfs_dir = debugfs_create_dir("iwlmvm", dbgfs_dir);
+ 
+ 	if (!mvmvif->dbgfs_dir) {
++#if LINUX_VERSION_IS_GEQ(3,12,0)
+ 		IWL_ERR(mvm, "Failed to create debugfs directory under %pd\n",
+ 			dbgfs_dir);
++#else
++		IWL_ERR(mvm, "Failed to create debugfs directory under %s\n",
++			dbgfs_dir->d_name.name);
++#endif
+ 		return;
+ 	}
+ 
+@@ -1547,15 +1552,28 @@ void iwl_mvm_vif_dbgfs_register(struct i
+ 	 * find
+ 	 * netdev:wlan0 -> ../../../ieee80211/phy0/netdev:wlan0/iwlmvm/
+ 	 */
++#if LINUX_VERSION_IS_GEQ(3,12,0)
+ 	snprintf(buf, 100, "../../../%pd3/%pd",
+ 		 dbgfs_dir,
+ 		 mvmvif->dbgfs_dir);
++#else
++	snprintf(buf, 100, "../../../%s/%s/%s/%s",
++		 dbgfs_dir->d_parent->d_parent->d_name.name,
++		 dbgfs_dir->d_parent->d_name.name,
++		 dbgfs_dir->d_name.name,
++		 mvmvif->dbgfs_dir->d_name.name);
++#endif
+ 
+ 	mvmvif->dbgfs_slink = debugfs_create_symlink(dbgfs_dir->d_name.name,
+ 						     mvm->debugfs_dir, buf);
+ 	if (!mvmvif->dbgfs_slink)
++#if LINUX_VERSION_IS_GEQ(3,12,0)
+ 		IWL_ERR(mvm, "Can't create debugfs symbolic link under %pd\n",
+ 			dbgfs_dir);
++#else
++		IWL_ERR(mvm, "Can't create debugfs symbolic link under %s\n",
++			dbgfs_dir->d_name.name);
++#endif
+ 	return;
+ err:
+ 	IWL_ERR(mvm, "Can't create debugfs entity\n");
+--- a/drivers/net/wireless/intel/iwlwifi/mvm/debugfs.c
++++ b/drivers/net/wireless/intel/iwlwifi/mvm/debugfs.c
+@@ -2056,7 +2056,13 @@ int iwl_mvm_dbgfs_register(struct iwl_mv
+ 	 * Create a symlink with mac80211. It will be removed when mac80211
+ 	 * exists (before the opmode exists which removes the target.)
+ 	 */
++#if LINUX_VERSION_IS_GEQ(3,12,0)
+ 	snprintf(buf, 100, "../../%pd2", dbgfs_dir->d_parent);
++#else
++	snprintf(buf, 100, "../../%s/%s",
++		 dbgfs_dir->d_parent->d_parent->d_name.name,
++		 dbgfs_dir->d_parent->d_name.name);
++#endif
+ 	if (!debugfs_create_symlink("iwlwifi", mvm->hw->wiphy->debugfsdir, buf))
+ 		goto err;
+ 

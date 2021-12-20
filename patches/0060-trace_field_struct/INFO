@@ -1,0 +1,11 @@
+deactivate struct tracing
+
+__field_struct was added in Linux commit 4d4c9cc83. It is hard to backport
+this feature, so just remove the code using it on kernel version < 3.16.
+
+commit 4d4c9cc839a308be3289a361ccba4447ee140552
+Author: Steven Rostedt <rostedt@goodmis.org>
+Date:   Tue Jun 17 08:59:16 2014 -0400
+
+    tracing: Add __field_struct macro for TRACE_EVENT()
+

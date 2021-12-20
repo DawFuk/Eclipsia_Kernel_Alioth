@@ -1,0 +1,10 @@
+In kernel 3.18 __u8 xmit_more is added to struct sk_buff.
+
+commit 0b725a2ca61bedc33a2a63d0451d528b268cf975
+Author: David S. Miller <davem@davemloft.net>
+Date:   Mon Aug 25 15:51:53 2014 -0700
+
+    net: Remove ndo_xmit_flush netdev operation, use signalling instead.
+
+git describe --contains 0b725a2ca61bedc33a2a63d0451d528b268cf975
+v3.18-rc1~52^2~228

@@ -1,0 +1,7 @@
+The uuid member was added to the struct mei_cl_device_id in this commit:
+commit c93b76b34b4d8dbe8e3443eb27e49ac60034342b
+Author: Tomas Winkler <tomas.winkler@intel.com>
+Date:   Thu May 7 15:54:02 2015 +0300
+
+    mei: bus: report also uuid in module alias
+
